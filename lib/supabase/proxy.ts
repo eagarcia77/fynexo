@@ -29,6 +29,7 @@ export async function updateSession(request: NextRequest) {
   const publicRoute =
     path === "/" ||
     path.startsWith("/login") ||
+    path.startsWith("/recover-link") ||
     path.startsWith("/join/") ||
     path.startsWith("/auth") ||
     path.startsWith("/api/health");
