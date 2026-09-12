@@ -22,7 +22,7 @@ export default async function RequisitionDetailPage({ params, searchParams }: { 
 
   const { data: req } = await supabase
     .from("requisitions")
-    .select("id,requisition_no,title,justification,status,total_amount,requester_id,fiscal_year_id,created_at,vendors(name)")
+    .select("id,requisition_no,title,justification,status,total_amount,requester_id,fiscal_year_id,created_at,vendors(legal_name)")
     .eq("id", id)
     .eq("organization_id", organizationId)
     .maybeSingle();
