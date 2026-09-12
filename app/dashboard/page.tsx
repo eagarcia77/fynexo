@@ -1,50 +1,141 @@
 import { AppShell } from "@/components/app-shell";
 import { KpiCard } from "@/components/kpi-card";
 import { requireUser } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
+
+function money(value: number) {
+  return new Intl.NumberFormat("es-PR", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value || 0);
+}
+
+function initials(name?: string | null, email?: string | null) {
+  const source = (name || email || "FX").trim();
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return source.slice(0, 2).toUpperCase();
+}
 
 export default async function DashboardPage() {
-  await requireUser();
+  const { userId, claims } = await requireUser();
+  const supabase = await createClient();
+
+  const [{ data: profile }, { data: membership }] = await Promise.all([
+    supabase.from("profiles").select("full_name,email").eq("id", userId).maybeSingle(),
+    supabase.from("organization_memberships").select("organization_id,membership_role").eq("user_id", userId).eq("is_active", true).limit(1).maybeSingle(),
+  ]);
+
+  const organizationId = membership?.organization_id;
+  let fiscalYear: { id: string; code: string; name: string } | null = null;
+
+  if (organizationId) {
+    const { data } = await supabase
+      .from("fiscal_years")
+      .select("id,code,name")
+      .eq("organization_id", organizationId)
+      .eq("status", "OPEN")
+      .order("starts_on", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    fiscalYear = data;
+  }
+
+  let revisedBudget = 0;
+  let available = 0;
+  let committed = 0;
+  let obligated = 0;
+  let expended = 0;
+  let requisitionsPending = 0;
+  let ordersOpen = 0;
+  let vouchersPending = 0;
+  let paymentsPosted = 0;
+  let activity: Array<{ id: string; event_type: string; entity_type: string; created_at: string }> = [];
+
+  if (organizationId && fiscalYear?.id) {
+    const [budgetLines, balances, reqCount, poCount, voucherCount, paymentCount, audit] = await Promise.all([
+      supabase.from("budget_lines").select("revised_budget").eq("organization_id", organizationId).eq("fiscal_year_id", fiscalYear.id).eq("is_active", true),
+      supabase.from("v_budget_balances").select("available,committed,obligated,expended").eq("organization_id", organizationId).eq("fiscal_year_id", fiscalYear.id),
+      supabase.from("requisitions").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).in("status", ["SUBMITTED", "UNDER_REVIEW"]),
+      supabase.from("purchase_orders").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).in("status", ["CREATED", "ISSUED", "PARTIALLY_RECEIVED"]),
+      supabase.from("vouchers").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).in("status", ["DRAFT", "SUBMITTED"]),
+      supabase.from("payments").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("status", "POSTED"),
+      supabase.from("audit_events").select("id,event_type,entity_type,created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(4),
+    ]);
+
+    revisedBudget = (budgetLines.data || []).reduce((sum, row) => sum + Number(row.revised_budget || 0), 0);
+    for (const row of balances.data || []) {
+      available += Number(row.available || 0);
+      committed += Number(row.committed || 0);
+      obligated += Number(row.obligated || 0);
+      expended += Number(row.expended || 0);
+    }
+    requisitionsPending = reqCount.count || 0;
+    ordersOpen = poCount.count || 0;
+    vouchersPending = voucherCount.count || 0;
+    paymentsPosted = paymentCount.count || 0;
+    activity = audit.data || [];
+  }
+
+  const used = revisedBudget > 0 ? Math.max(0, Math.min(100, ((revisedBudget - available) / revisedBudget) * 100)) : 0;
+  const displayName = profile?.full_name || String(claims.email || "Usuario FYNEXO");
+
   return (
-    <AppShell title="Financial Command Center" subtitle="Visión ejecutiva del presupuesto, compras y obligaciones.">
+    <AppShell
+      title="Financial Command Center"
+      subtitle={`Bienvenido, ${displayName}. Visión ejecutiva con datos reales de FYNEXO.`}
+      fiscalYearLabel={fiscalYear ? `FY ${fiscalYear.code}` : "Sin año fiscal abierto"}
+      userInitials={initials(profile?.full_name, profile?.email || String(claims.email || ""))}
+    >
       <section className="kpi-grid" aria-label="Indicadores financieros">
-        <KpiCard label="Presupuesto vigente" value="$4.85M" detail="100% autorizado" />
-        <KpiCard label="Disponible" value="$1.36M" detail="28.1% restante" tone="success" />
-        <KpiCard label="Comprometido" value="$610K" detail="12.6% del presupuesto" />
-        <KpiCard label="Ejecutado" value="$2.87M" detail="59.2% pagado" />
+        <KpiCard label="Presupuesto vigente" value={money(revisedBudget)} detail="Suma de partidas activas" />
+        <KpiCard label="Disponible" value={money(available)} detail={`${revisedBudget ? ((available / revisedBudget) * 100).toFixed(1) : "0.0"}% restante`} tone="success" />
+        <KpiCard label="Comprometido + obligado" value={money(committed + obligated)} detail={`Comprometido ${money(committed)} · Obligado ${money(obligated)}`} />
+        <KpiCard label="Ejecutado" value={money(expended)} detail={`${revisedBudget ? ((expended / revisedBudget) * 100).toFixed(1) : "0.0"}% pagado`} />
       </section>
 
       <section className="dashboard-grid">
         <article className="panel span-2">
-          <div className="panel-header"><div><p className="eyebrow">Ejecución</p><h2>Presupuesto FY 2026–2027</h2></div><strong>71.9%</strong></div>
-          <div className="progress" aria-label="Ejecución presupuestaria 71.9%"><span style={{ width: "71.9%" }} /></div>
-          <div className="mini-stats"><span>Original <b>$4.62M</b></span><span>Ajustes <b>+$230K</b></span><span>Disponible <b>$1.36M</b></span></div>
+          <div className="panel-header">
+            <div><p className="eyebrow">Ejecución real</p><h2>{fiscalYear?.name || "Presupuesto"}</h2></div>
+            <strong>{used.toFixed(1)}%</strong>
+          </div>
+          <div className="progress" aria-label={`Ejecución presupuestaria ${used.toFixed(1)}%`}><span style={{ width: `${used}%` }} /></div>
+          <div className="mini-stats">
+            <span>Vigente <b>{money(revisedBudget)}</b></span>
+            <span>Comprometido <b>{money(committed)}</b></span>
+            <span>Obligado <b>{money(obligated)}</b></span>
+            <span>Disponible <b>{money(available)}</b></span>
+          </div>
         </article>
 
         <article className="panel">
           <p className="eyebrow">Mi trabajo</p><h2>Requiere atención</h2>
           <ul className="task-list">
-            <li><span>Requisiciones por aprobar</span><b>7</b></li>
-            <li><span>Órdenes sin recibir</span><b>4</b></li>
-            <li><span>Comprobantes pendientes</span><b>6</b></li>
-            <li><span>Excepciones abiertas</span><b>2</b></li>
+            <li><span>Requisiciones en proceso</span><b>{requisitionsPending}</b></li>
+            <li><span>Órdenes abiertas</span><b>{ordersOpen}</b></li>
+            <li><span>Comprobantes pendientes</span><b>{vouchersPending}</b></li>
+            <li><span>Pagos contabilizados</span><b>{paymentsPosted}</b></li>
           </ul>
         </article>
 
         <article className="panel span-2">
-          <p className="eyebrow">Actividad</p><h2>Últimos movimientos</h2>
-          <div className="timeline">
-            <div><i /> <span><b>REQ-2027-000142</b> aprobada</span><time>09:42</time></div>
-            <div><i /> <span><b>PO-2027-000088</b> emitida</span><time>09:39</time></div>
-            <div><i /> <span>Partida <b>5200</b> ajustada</span><time>09:35</time></div>
-            <div><i /> <span><b>VCH-2027-000052</b> sometido</span><time>09:29</time></div>
-          </div>
+          <p className="eyebrow">Auditoría</p><h2>Últimos movimientos</h2>
+          {activity.length ? (
+            <div className="timeline">
+              {activity.map((item) => (
+                <div key={item.id}>
+                  <i />
+                  <span><b>{item.event_type}</b> · {item.entity_type}</span>
+                  <time>{new Intl.DateTimeFormat("es-PR", { hour: "2-digit", minute: "2-digit" }).format(new Date(item.created_at))}</time>
+                </div>
+              ))}
+            </div>
+          ) : <p className="muted">Aún no hay movimientos auditables. Los eventos aparecerán aquí al comenzar las operaciones.</p>}
         </article>
 
         <article className="panel alert-panel">
-          <p className="eyebrow">Control</p><h2>Alertas inteligentes</h2>
-          <p><b>Partida 5200</b> alcanzó 91% de utilización.</p>
-          <p><b>INV-00922</b> presenta diferencia de $850 contra la orden.</p>
-          <p><b>3 órdenes</b> superan 30 días abiertas.</p>
+          <p className="eyebrow">Estado</p><h2>Controles financieros</h2>
+          <p><b>RLS activo</b> en todas las tablas operacionales.</p>
+          <p><b>Ledger protegido</b> contra edición o eliminación directa.</p>
+          <p><b>Three-Way Match</b> preparado para órdenes, recibos e invoices.</p>
         </article>
       </section>
     </AppShell>
