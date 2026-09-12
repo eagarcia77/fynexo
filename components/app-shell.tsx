@@ -12,6 +12,7 @@ const nav = [
   ["Pagos", "/payments"],
   ["Proveedores", "/vendors"],
   ["Informes", "/reports"],
+  ["Auditoría", "/audit"],
   ["Administración", "/administration"],
 ];
 
