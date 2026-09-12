@@ -24,12 +24,19 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
   const profileMap = new Map((profilesResult.data || []).map((p: any) => [p.id, p]));
   const userRoleMap = new Map((userRolesResult.data || []).map((ur: any) => [ur.user_id, ur]));
   const invitePath = params.invite ? `/join/${params.invite}` : null;
+  const inviteUrl = invitePath ? `https://fynexo.onrender.com${invitePath}` : null;
 
   return (
     <AppShell title="FYNEXO Control Center" subtitle="Usuarios, roles, invitaciones y controles de acceso.">
       {params.error ? <div className="error-box" role="alert">{params.error}</div> : null}
       {params.message ? <div className="success-box" role="status">{params.message}</div> : null}
-      {invitePath ? <div className="success-box" role="status"><b>Invitación creada para {params.email}.</b><br />Comparta este enlace una sola vez: <a href={invitePath}><code>{invitePath}</code></a>{params.expires ? <><br /><small>Expira: {new Intl.DateTimeFormat("es-PR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(params.expires))}</small></> : null}</div> : null}
+      {inviteUrl ? <div className="success-box invite-success" role="status">
+        <b>Invitación creada para {params.email}.</b>
+        <span>Comparta este enlace una sola vez:</span>
+        <a className="invite-link" href={inviteUrl}>{inviteUrl}</a>
+        <div className="form-actions"><a className="primary-button" href={inviteUrl}>Abrir invitación</a></div>
+        {params.expires ? <small>Expira: {new Intl.DateTimeFormat("es-PR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(params.expires))}</small> : null}
+      </div> : null}
 
       <div className="form-grid">
         <section className="panel">
