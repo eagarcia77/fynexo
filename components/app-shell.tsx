@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { signOut } from "@/app/login/actions";
 
 const nav = [
@@ -29,18 +32,27 @@ export function AppShell({
   fiscalYearLabel?: string;
   userInitials?: string;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <div className="brand-mark small">FX</div>
-          <div><strong>FYNEXO</strong><span>Financial Intelligence</span></div>
+      <aside className={`sidebar ${menuOpen ? "menu-open" : ""}`}>
+        <div className="sidebar-head">
+          <div className="sidebar-brand">
+            <div className="brand-mark small">FX</div>
+            <div><strong>FYNEXO</strong><span>Financial Intelligence</span></div>
+          </div>
+          <button className="mobile-menu-button" type="button" aria-expanded={menuOpen} aria-controls="fynexo-navigation" onClick={() => setMenuOpen((value) => !value)}>
+            <span aria-hidden="true">{menuOpen ? "×" : "☰"}</span><span className="sr-only">{menuOpen ? "Cerrar menú" : "Abrir menú"}</span>
+          </button>
         </div>
-        <nav aria-label="Navegación principal">
-          {nav.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
+        <div className="mobile-nav-label">Menú principal</div>
+        <nav id="fynexo-navigation" aria-label="Navegación principal">
+          {nav.map(([label, href]) => <Link key={href} href={href} onClick={() => setMenuOpen(false)}>{label}</Link>)}
         </nav>
         <form action={signOut}><button className="ghost-button" type="submit">Cerrar sesión</button></form>
       </aside>
+      {menuOpen ? <button className="menu-backdrop" type="button" aria-label="Cerrar menú" onClick={() => setMenuOpen(false)} /> : null}
       <div className="content-shell">
         <header className="topbar">
           <div>
