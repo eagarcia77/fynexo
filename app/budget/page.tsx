@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { KpiCard } from "@/components/kpi-card";
 import { requireUser } from "@/lib/auth/session";
@@ -7,7 +8,8 @@ function money(value: number) {
   return new Intl.NumberFormat("es-PR", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value || 0);
 }
 
-export default async function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<{ message?: string }> }) {
+  const params = await searchParams;
   const { userId } = await requireUser();
   const supabase = await createClient();
 
@@ -67,6 +69,7 @@ export default async function Page() {
       subtitle="Partidas, fondos, cuentas y disponibilidad presupuestaria en tiempo real."
       fiscalYearLabel={fiscalYear ? `FY ${fiscalYear.code}` : "Sin año fiscal abierto"}
     >
+      {params.message ? <div className="success-box" role="status">{params.message}</div> : null}
       <section className="kpi-grid" aria-label="Resumen presupuestario">
         <KpiCard label="Presupuesto original" value={money(totalOriginal)} detail={`${lines.length} partidas`} />
         <KpiCard label="Presupuesto vigente" value={money(totalRevised)} detail="Incluye ajustes presupuestarios" />
@@ -81,51 +84,18 @@ export default async function Page() {
             <h2>{fiscalYear?.name || "Partidas"}</h2>
             <p className="muted">Los saldos provienen de la vista financiera basada en el budget ledger.</p>
           </div>
-          <button className="primary-button" type="button" disabled title="Se habilitará en la siguiente fase de captura">+ Nueva partida</button>
+          <Link className="primary-button" href="/budget/new">+ Nueva partida</Link>
         </div>
 
         {lines.length ? (
           <div className="table-wrap">
             <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Cuenta</th>
-                  <th>Departamento</th>
-                  <th>Fondo</th>
-                  <th>Programa / Proyecto</th>
-                  <th className="num">Vigente</th>
-                  <th className="num">Comprometido</th>
-                  <th className="num">Obligado</th>
-                  <th className="num">Ejecutado</th>
-                  <th className="num">Disponible</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((line) => {
-                  const bal = balanceMap.get(line.id) || {};
-                  return (
-                    <tr key={line.id}>
-                      <td><b>{line.accounts?.code || "—"}</b><small>{line.accounts?.name || "Sin cuenta"}</small></td>
-                      <td>{line.departments?.name || "—"}</td>
-                      <td>{line.funds?.code || "—"}</td>
-                      <td>{line.programs?.code || line.projects?.code || "—"}</td>
-                      <td className="num">{money(Number(line.revised_budget || 0))}</td>
-                      <td className="num">{money(Number(bal.committed || 0))}</td>
-                      <td className="num">{money(Number(bal.obligated || 0))}</td>
-                      <td className="num">{money(Number(bal.expended || 0))}</td>
-                      <td className="num"><b>{money(Number(bal.available || 0))}</b></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
+              <thead><tr><th>Cuenta</th><th>Departamento</th><th>Fondo</th><th>Programa / Proyecto</th><th className="num">Vigente</th><th className="num">Comprometido</th><th className="num">Obligado</th><th className="num">Ejecutado</th><th className="num">Disponible</th></tr></thead>
+              <tbody>{lines.map((line) => { const bal = balanceMap.get(line.id) || {}; return <tr key={line.id}><td><b>{line.accounts?.code || "—"}</b><small>{line.accounts?.name || "Sin cuenta"}</small></td><td>{line.departments?.name || "—"}</td><td>{line.funds?.code || "—"}</td><td>{line.programs?.code || line.projects?.code || "—"}</td><td className="num">{money(Number(line.revised_budget || 0))}</td><td className="num">{money(Number(bal.committed || 0))}</td><td className="num">{money(Number(bal.obligated || 0))}</td><td className="num">{money(Number(bal.expended || 0))}</td><td className="num"><b>{money(Number(bal.available || 0))}</b></td></tr>; })}</tbody>
             </table>
           </div>
         ) : (
-          <div className="empty-state">
-            <div className="empty-icon" aria-hidden="true">$</div>
-            <h3>Aún no hay partidas presupuestarias</h3>
-            <p className="muted">La estructura financiera está activa. La siguiente fase habilitará la creación de partidas y el registro del presupuesto original mediante transacciones protegidas.</p>
-          </div>
+          <div className="empty-state"><div className="empty-icon" aria-hidden="true">$</div><h3>Aún no hay partidas presupuestarias</h3><p className="muted">Use “Nueva partida” para registrar su estructura oficial y publicar el presupuesto inicial en el ledger.</p></div>
         )}
       </section>
     </AppShell>
