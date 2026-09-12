@@ -10,6 +10,17 @@ async function client() {
   return createClient();
 }
 
+export async function assignVendor(formData: FormData) {
+  const supabase = await client();
+  const requisitionId = String(formData.get("requisitionId") || "");
+  const vendorId = String(formData.get("vendorId") || "");
+  if (!requisitionId || !vendorId) redirect(`/orders?error=${encodeURIComponent("Seleccione un proveedor activo.")}`);
+  const { error } = await supabase.rpc("assign_vendor_to_requisition", { p_requisition: requisitionId, p_vendor: vendorId });
+  if (error) redirect(`/orders?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/orders"); revalidatePath("/requisitions"); revalidatePath("/dashboard");
+  redirect(`/orders?message=${encodeURIComponent("Proveedor asignado a la requisición.")}`);
+}
+
 export async function createPurchaseOrder(formData: FormData) {
   const supabase = await client();
   const requisitionId = String(formData.get("requisitionId") || "");
