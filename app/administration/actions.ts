@@ -10,7 +10,9 @@ async function context() {
   const supabase = await createClient();
   const { data: membership } = await supabase.from("organization_memberships").select("organization_id").eq("user_id", userId).eq("is_active", true).limit(1).maybeSingle();
   if (!membership?.organization_id) throw new Error("No active organization membership");
-  return { supabase, organizationId: membership.organization_id };
+  const { data: users, error } = await supabase.rpc("admin_list_org_users", { p_org: membership.organization_id });
+  if (error) redirect(`/dashboard?error=${encodeURIComponent("Acceso administrativo requerido.")}`);
+  return { supabase, organizationId: membership.organization_id, users: users || [] };
 }
 
 export async function createInvitation(formData: FormData) {
@@ -43,4 +45,15 @@ export async function setUserRole(formData: FormData) {
   if (error) redirect(`/administration?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/administration");
   redirect(`/administration?message=${encodeURIComponent("Rol de usuario actualizado.")}`);
+}
+
+export async function sendUserPasswordReset(formData: FormData) {
+  const { supabase, users } = await context();
+  const userId = String(formData.get("userId") || "");
+  const target = users.find((u: any) => u.user_id === userId);
+  const email = String(target?.email || "").trim().toLowerCase();
+  if (!email) redirect(`/administration?error=${encodeURIComponent("No se encontró un correo válido para este usuario.")}`);
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: "https://fynexo.onrender.com/auth/callback?next=/reset-password" });
+  if (error) redirect(`/administration?error=${encodeURIComponent(error.message)}`);
+  redirect(`/administration?message=${encodeURIComponent(`Enlace seguro para cambiar la contraseña enviado a ${email}.`)}`);
 }
