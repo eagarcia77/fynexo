@@ -17,23 +17,19 @@ export async function updateSession(request: NextRequest) {
       setAll(cookiesToSet, headers) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options)
-        );
-        Object.entries(headers).forEach(([key, value]) =>
-          response.headers.set(key, value)
-        );
+        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        Object.entries(headers).forEach(([key, value]) => response.headers.set(key, value));
       },
     },
   });
 
-  // getClaims() verifies the token and is the supported server-side guard.
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
   const path = request.nextUrl.pathname;
   const publicRoute =
     path === "/" ||
     path.startsWith("/login") ||
+    path.startsWith("/join/") ||
     path.startsWith("/auth") ||
     path.startsWith("/api/health");
 
