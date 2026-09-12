@@ -1,4 +1,4 @@
-import { signIn } from "./actions";
+import { requestPasswordReset, signIn } from "./actions";
 
 export default async function LoginPage({
   searchParams,
@@ -28,6 +28,17 @@ export default async function LoginPage({
           {params.message ? <div className="success-box" role="status">{params.message}</div> : null}
           <button className="primary-button" type="submit">Iniciar sesión</button>
         </form>
+
+        <details>
+          <summary>¿Olvidó su contraseña?</summary>
+          <form action={requestPasswordReset} className="login-form compact-form">
+            <label>
+              Correo de la cuenta
+              <input type="email" name="resetEmail" autoComplete="email" placeholder="nombre@correo.com" required />
+            </label>
+            <button className="secondary-button" type="submit">Enviar enlace de recuperación</button>
+          </form>
+        </details>
 
         <p className="tiny">Budget • Procure • Control • Analyze</p>
       </section>
