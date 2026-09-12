@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,6 +12,24 @@ export async function signIn(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
   redirect("/dashboard");
+}
+
+export async function requestPasswordReset(formData: FormData) {
+  const email = String(formData.get("resetEmail") || "").trim().toLowerCase();
+  if (!email) redirect(`/login?error=${encodeURIComponent("Escriba el correo de la cuenta que desea recuperar.")}`);
+
+  const headerStore = await headers();
+  const host = headerStore.get("x-forwarded-host") || headerStore.get("host");
+  const proto = headerStore.get("x-forwarded-proto") || "https";
+  const origin = host ? `${proto}://${host}` : "https://fynexo.onrender.com";
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=/reset-password`,
+  });
+
+  if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
+  redirect(`/login?message=${encodeURIComponent("Si la cuenta existe, recibirá un correo para restablecer la contraseña.")}`);
 }
 
 export async function signOut() {
