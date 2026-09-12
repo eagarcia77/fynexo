@@ -15,7 +15,19 @@ const nav = [
   ["Administración", "/administration"],
 ];
 
-export function AppShell({ children, title, subtitle }: { children: React.ReactNode; title: string; subtitle?: string }) {
+export function AppShell({
+  children,
+  title,
+  subtitle,
+  fiscalYearLabel = "FY 2026–2027",
+  userInitials = "FX",
+}: {
+  children: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  fiscalYearLabel?: string;
+  userInitials?: string;
+}) {
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -31,13 +43,13 @@ export function AppShell({ children, title, subtitle }: { children: React.ReactN
       <div className="content-shell">
         <header className="topbar">
           <div>
-            <p className="eyebrow">FY 2026–2027</p>
+            <p className="eyebrow">{fiscalYearLabel}</p>
             <h1>{title}</h1>
             {subtitle ? <p className="muted">{subtitle}</p> : null}
           </div>
           <div className="top-actions">
             <button className="command-button" type="button">⌘K Buscar o crear</button>
-            <div className="avatar" aria-label="Perfil de usuario">EG</div>
+            <div className="avatar" aria-label="Perfil de usuario">{userInitials}</div>
           </div>
         </header>
         <main className="page-content">{children}</main>
