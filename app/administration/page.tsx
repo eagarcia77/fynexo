@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -15,6 +16,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
     organizationId ? supabase.rpc("admin_list_org_users", { p_org: organizationId }) : Promise.resolve({ data: [], error: null } as any),
     organizationId ? supabase.from("user_invitations").select("id,email,expires_at,accepted_at,revoked_at,created_at,roles(name,code)").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [] } as any),
   ]);
+
+  if (usersResult.error?.message?.includes("ADMIN_REQUIRED")) {
+    redirect("/dashboard?error=Acceso%20administrativo%20requerido");
+  }
+
   const roles = rolesResult.data || []; const users = usersResult.data || []; const invites = invitesResult.data || [];
   const invitePath = params.invite ? `/join/${params.invite}` : null; const inviteUrl = invitePath ? `https://fynexo.onrender.com${invitePath}` : null;
 
