@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requestPasswordReset, signIn } from "./actions";
 
 export default async function LoginPage({
@@ -38,6 +39,8 @@ export default async function LoginPage({
             </label>
             <button className="secondary-button" type="submit">Enviar enlace de recuperación</button>
           </form>
+          <p className="tiny">Si el botón del correo no abre, copie el enlace y use la recuperación alternativa.</p>
+          <Link className="secondary-button" href="/recover-link">El enlace del correo no abre</Link>
         </details>
 
         <p className="tiny">Budget • Procure • Control • Analyze</p>
