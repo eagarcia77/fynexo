@@ -1,0 +1,46 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth/session";
+
+async function context() {
+  const { userId } = await requireUser();
+  const supabase = await createClient();
+  const { data: membership } = await supabase.from("organization_memberships").select("organization_id").eq("user_id", userId).eq("is_active", true).limit(1).maybeSingle();
+  if (!membership?.organization_id) throw new Error("No active organization membership");
+  return { supabase, organizationId: membership.organization_id };
+}
+
+export async function createInvitation(formData: FormData) {
+  const { supabase, organizationId } = await context();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const roleId = String(formData.get("roleId") || "");
+  const expiresHours = Number(formData.get("expiresHours") || 72);
+  const { data, error } = await supabase.rpc("create_user_invitation", { p_org: organizationId, p_email: email, p_role: roleId, p_expires_hours: expiresHours });
+  if (error) redirect(`/administration?error=${encodeURIComponent(error.message)}`);
+  const row = Array.isArray(data) ? data[0] : data;
+  revalidatePath("/administration");
+  redirect(`/administration?invite=${encodeURIComponent(row?.token || "")}&email=${encodeURIComponent(email)}&expires=${encodeURIComponent(row?.expires_at || "")}`);
+}
+
+export async function revokeInvitation(formData: FormData) {
+  const { supabase } = await context();
+  const invitationId = String(formData.get("invitationId") || "");
+  const { error } = await supabase.rpc("revoke_user_invitation", { p_invitation: invitationId });
+  if (error) redirect(`/administration?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/administration");
+  redirect(`/administration?message=${encodeURIComponent("Invitación revocada.")}`);
+}
+
+export async function setUserRole(formData: FormData) {
+  const { supabase, organizationId } = await context();
+  const userId = String(formData.get("userId") || "");
+  const roleId = String(formData.get("roleId") || "");
+  const active = String(formData.get("active") || "true") === "true";
+  const { error } = await supabase.rpc("set_user_role", { p_org: organizationId, p_user: userId, p_role: roleId, p_active: active });
+  if (error) redirect(`/administration?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/administration");
+  redirect(`/administration?message=${encodeURIComponent("Rol de usuario actualizado.")}`);
+}
