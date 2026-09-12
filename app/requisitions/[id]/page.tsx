@@ -38,6 +38,7 @@ export default async function RequisitionDetailPage({ params, searchParams }: { 
   const balanceMap = new Map((balances || []).map((b: any) => [b.budget_line_id, Number(b.available || 0)]));
   const editable = req.status === "DRAFT" && req.requester_id === userId;
   const canApprove = req.status === "SUBMITTED" && req.requester_id !== userId;
+  const hasItems = (items || []).length > 0;
 
   const editor = (
     <section className="panel">
@@ -52,7 +53,6 @@ export default async function RequisitionDetailPage({ params, searchParams }: { 
         <label>Precio unitario *<input name="unitPrice" type="number" min="0" step="0.01" required /></label>
         <button className="secondary-button" type="submit">Agregar y validar presupuesto</button>
       </form>
-      {(items || []).length > 0 ? <form action={submitRequisition} className="form-actions top-gap"><input type="hidden" name="requisitionId" value={id} /><button className="primary-button" type="submit">Someter para aprobación</button></form> : null}
     </section>
   );
 
@@ -62,16 +62,23 @@ export default async function RequisitionDetailPage({ params, searchParams }: { 
       {messages.error ? <div className="error-box" role="alert">{messages.error}</div> : null}
       {messages.message ? <div className="success-box" role="status">{messages.message}</div> : null}
 
-      <div className="form-grid">
+      {editable && hasItems ? <section className="panel workflow-callout">
+        <div><p className="eyebrow">Siguiente paso</p><h2>Someter requisición</h2><p className="muted">El borrador ya tiene artículos. Al someter, FYNEXO asignará el número oficial y la enviará al aprobador. El presupuesto todavía no se compromete hasta la aprobación.</p></div>
+        <form action={submitRequisition}><input type="hidden" name="requisitionId" value={id} /><button className="primary-button" type="submit">Someter requisición</button></form>
+      </section> : null}
+
+      {req.status === "SUBMITTED" && !canApprove ? <section className="notice-box"><b>Pendiente de aprobación.</b> Esta requisición ya fue sometida y requiere acción de un usuario distinto con permiso de aprobación.</section> : null}
+
+      {canApprove ? <section className="panel workflow-callout"><div><p className="eyebrow">Acción requerida</p><h2>Aprobar y registrar compromiso</h2><p className="muted">La separación de funciones está activa. Al aprobar, FYNEXO registrará el COMMITMENT en el budget ledger.</p></div><form action={approveRequisition} className="entity-form approval-inline"><input type="hidden" name="requisitionId" value={id} /><label>Comentarios<textarea name="comments" rows={3} /></label><button className="primary-button" type="submit">Aprobar y comprometer</button></form></section> : null}
+
+      <div className="form-grid top-gap">
         <section className="panel span-2">
           <p className="eyebrow">Resumen</p><h2>Artículos</h2>
-          {(items || []).length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Cuenta</th><th>Descripción</th><th className="num">Cantidad</th><th className="num">Precio</th><th className="num">Total</th></tr></thead><tbody>{(items || []).map((item: any) => <tr key={item.id}><td><b>{item.budget_lines?.accounts?.code || "—"}</b><small>{item.budget_lines?.accounts?.name || ""}</small></td><td>{item.description}</td><td className="num">{item.quantity}</td><td className="num">{money(Number(item.unit_price))}</td><td className="num"><b>{money(Number(item.line_total))}</b></td></tr>)}</tbody></table></div> : <p className="muted">Aún no se han añadido artículos.</p>}
+          {hasItems ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Cuenta</th><th>Descripción</th><th className="num">Cantidad</th><th className="num">Precio</th><th className="num">Total</th></tr></thead><tbody>{(items || []).map((item: any) => <tr key={item.id}><td><b>{item.budget_lines?.accounts?.code || "—"}</b><small>{item.budget_lines?.accounts?.name || ""}</small></td><td>{item.description}</td><td className="num">{item.quantity}</td><td className="num">{money(Number(item.unit_price))}</td><td className="num"><b>{money(Number(item.line_total))}</b></td></tr>)}</tbody></table></div> : <p className="muted">Aún no se han añadido artículos.</p>}
           {req.justification ? <><h3>Justificación</h3><p>{req.justification}</p></> : null}
         </section>
 
         {editable ? <RecordLockGuard organizationId={organizationId} entityType="REQUISITION" entityId={id} activity="EDITAR_REQUISICION">{editor}</RecordLockGuard> : null}
-
-        {canApprove ? <section className="panel"><p className="eyebrow">Aprobación</p><h2>Control de compromiso</h2><p className="muted">Al aprobar, FYNEXO registra el compromiso en el budget ledger. La separación de funciones impide aprobar una requisición propia.</p><form action={approveRequisition} className="entity-form"><input type="hidden" name="requisitionId" value={id} /><label>Comentarios<textarea name="comments" rows={4} /></label><button className="primary-button" type="submit">Aprobar y comprometer</button></form></section> : null}
       </div>
     </AppShell>
   );
