@@ -8,15 +8,32 @@ const allowedHosts = new Set([
   "fynexo.onrender.com",
 ]);
 
+const canonicalRecovery = "https://fynexo.onrender.com/auth/callback?next=/reset-password";
+
+function normalizeRecoveryUrl(url: URL) {
+  if (!allowedHosts.has(url.hostname)) {
+    throw new Error("El enlace no corresponde a un enlace seguro de recuperación de FYNEXO.");
+  }
+
+  if (url.hostname === "ibvzibenuusninpmpkpm.supabase.co" && url.pathname === "/auth/v1/verify") {
+    const redirectTo = url.searchParams.get("redirect_to");
+    if (!redirectTo || redirectTo.includes("localhost") || redirectTo.includes("127.0.0.1")) {
+      url.searchParams.set("redirect_to", canonicalRecovery);
+    }
+  }
+
+  return url.toString();
+}
+
 function extractSafeTarget(raw: string) {
   const first = new URL(raw.trim());
-  if (allowedHosts.has(first.hostname)) return first.toString();
+  if (allowedHosts.has(first.hostname)) return normalizeRecoveryUrl(first);
 
   // Microsoft Safe Links often wrap the real destination in ?url=...
   const nested = first.searchParams.get("url");
   if (nested) {
     const decoded = new URL(nested);
-    if (allowedHosts.has(decoded.hostname)) return decoded.toString();
+    return normalizeRecoveryUrl(decoded);
   }
 
   throw new Error("El enlace no corresponde a un enlace seguro de recuperación de FYNEXO.");
@@ -44,7 +61,7 @@ export default function RecoverLinkPage() {
         <p className="eyebrow">Recuperación alternativa</p>
         <h1 id="recover-link-title">Abrir enlace de recuperación</h1>
         <p className="muted">
-          Si el botón del correo no abre, manténgalo presionado, copie el enlace completo y péguelo aquí.
+          Si el botón del correo no abre, manténgalo presionado, copie el enlace completo y péguelo aquí. Si el correo contiene una redirección antigua a localhost, FYNEXO la corregirá automáticamente hacia el servidor de producción.
         </p>
         <form onSubmit={openRecovery} className="login-form">
           <label>
@@ -60,7 +77,7 @@ export default function RecoverLinkPage() {
             />
           </label>
           {error ? <div className="error-box" role="alert">{error}</div> : null}
-          <button className="primary-button" type="submit">Abrir enlace seguro</button>
+          <button className="primary-button" type="submit">Corregir y abrir enlace</button>
         </form>
         <p className="tiny">FYNEXO solo aceptará enlaces del proyecto Supabase o de fynexo.onrender.com.</p>
         <div className="form-actions top-gap"><Link className="secondary-button" href="/login">Volver al inicio de sesión</Link></div>
