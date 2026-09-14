@@ -5,6 +5,14 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 
+function passwordResetError(message: string) {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("email rate limit exceeded") || normalized.includes("rate limit")) {
+    return "Se alcanzó temporalmente el límite de correos de recuperación. Espere unos minutos antes de intentar nuevamente.";
+  }
+  return "No fue posible enviar el enlace de recuperación. Intente nuevamente.";
+}
+
 async function context() {
   const { userId } = await requireUser();
   const supabase = await createClient();
@@ -54,6 +62,6 @@ export async function sendUserPasswordReset(formData: FormData) {
   const email = String(target?.email || "").trim().toLowerCase();
   if (!email) redirect(`/administration?error=${encodeURIComponent("No se encontró un correo válido para este usuario.")}`);
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: "https://fynexo.onrender.com/auth/callback?next=/reset-password" });
-  if (error) redirect(`/administration?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/administration?error=${encodeURIComponent(passwordResetError(error.message))}`);
   redirect(`/administration?message=${encodeURIComponent(`Enlace seguro para cambiar la contraseña enviado a ${email}.`)}`);
 }
