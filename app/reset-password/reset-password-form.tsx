@@ -4,6 +4,25 @@ import { FormEvent, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+function passwordUpdateError(message: string) {
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("weak password") || normalized.includes("password should be")) {
+    return "La contraseña no cumple con los requisitos de seguridad. Use una combinación más segura de letras, números y símbolos.";
+  }
+  if (normalized.includes("same password") || normalized.includes("different from the old password")) {
+    return "La nueva contraseña debe ser diferente a la contraseña anterior.";
+  }
+  if (normalized.includes("session") || normalized.includes("jwt") || normalized.includes("expired")) {
+    return "La sesión de recuperación expiró. Solicite un enlace nuevo e intente nuevamente.";
+  }
+  if (normalized.includes("rate limit")) {
+    return "Se alcanzó temporalmente el límite de intentos. Espere unos minutos antes de volver a intentarlo.";
+  }
+
+  return "No fue posible actualizar la contraseña. Solicite un enlace nuevo e intente nuevamente.";
+}
+
 export function ResetPasswordForm() {
   const params = useSearchParams();
   const [password, setPassword] = useState("");
@@ -57,7 +76,7 @@ export function ResetPasswordForm() {
     const { error: updateError } = await supabase.auth.updateUser({ password });
     if (updateError) {
       setSaving(false);
-      setError(updateError.message);
+      setError(passwordUpdateError(updateError.message));
       return;
     }
 
