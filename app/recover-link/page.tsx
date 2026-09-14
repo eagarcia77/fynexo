@@ -8,9 +8,25 @@ const allowedHosts = new Set([
   "fynexo.onrender.com",
 ]);
 
-const canonicalRecovery = "https://fynexo.onrender.com/auth/callback?next=/reset-password";
+const legacyLocalHosts = new Set(["localhost", "127.0.0.1"]);
+const canonicalOrigin = "https://fynexo.onrender.com";
+const canonicalRecovery = `${canonicalOrigin}/auth/callback?next=/reset-password`;
 
 function normalizeRecoveryUrl(url: URL) {
+  // Supabase can return the PKCE code directly to an old local Site URL.
+  // Rewrite that URL to FYNEXO production while preserving the one-time code.
+  if (legacyLocalHosts.has(url.hostname)) {
+    const code = url.searchParams.get("code");
+    if (!code) {
+      throw new Error("El enlace local no contiene un código de recuperación válido.");
+    }
+
+    const target = new URL(`${canonicalOrigin}/auth/callback`);
+    target.searchParams.set("code", code);
+    target.searchParams.set("next", "/reset-password");
+    return target.toString();
+  }
+
   if (!allowedHosts.has(url.hostname)) {
     throw new Error("El enlace no corresponde a un enlace seguro de recuperación de FYNEXO.");
   }
@@ -27,7 +43,10 @@ function normalizeRecoveryUrl(url: URL) {
 
 function extractSafeTarget(raw: string) {
   const first = new URL(raw.trim());
-  if (allowedHosts.has(first.hostname)) return normalizeRecoveryUrl(first);
+
+  if (allowedHosts.has(first.hostname) || legacyLocalHosts.has(first.hostname)) {
+    return normalizeRecoveryUrl(first);
+  }
 
   // Microsoft Safe Links often wrap the real destination in ?url=...
   const nested = first.searchParams.get("url");
@@ -61,7 +80,7 @@ export default function RecoverLinkPage() {
         <p className="eyebrow">Recuperación alternativa</p>
         <h1 id="recover-link-title">Abrir enlace de recuperación</h1>
         <p className="muted">
-          Si el botón del correo no abre, manténgalo presionado, copie el enlace completo y péguelo aquí. Si el correo contiene una redirección antigua a localhost, FYNEXO la corregirá automáticamente hacia el servidor de producción.
+          Pegue aquí el enlace completo recibido por correo. FYNEXO puede corregir tanto enlaces de Supabase con una redirección antigua como enlaces que llegaron directamente a localhost con un código PKCE.
         </p>
         <form onSubmit={openRecovery} className="login-form">
           <label>
@@ -70,16 +89,17 @@ export default function RecoverLinkPage() {
               value={value}
               onChange={(e) => setValue(e.target.value)}
               rows={5}
-              placeholder="https://..."
+              placeholder="http://localhost:3000/?code=..."
               autoCapitalize="none"
               autoCorrect="off"
+              spellCheck={false}
               required
             />
           </label>
           {error ? <div className="error-box" role="alert">{error}</div> : null}
           <button className="primary-button" type="submit">Corregir y abrir enlace</button>
         </form>
-        <p className="tiny">FYNEXO solo aceptará enlaces del proyecto Supabase o de fynexo.onrender.com.</p>
+        <p className="tiny">Por seguridad, los códigos de recuperación son temporales y de un solo uso.</p>
         <div className="form-actions top-gap"><Link className="secondary-button" href="/login">Volver al inicio de sesión</Link></div>
       </section>
     </main>
