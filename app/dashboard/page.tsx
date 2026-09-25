@@ -84,6 +84,12 @@ export default async function DashboardPage() {
       fiscalYearLabel={fiscalYear ? `FY ${fiscalYear.code}` : "Sin año fiscal abierto"}
       userInitials={initials(profile?.full_name, profile?.email || String(claims.email || ""))}
     >
+      <section className="executive-strip">
+        <div><span>Operación financiera</span><strong>{fiscalYear?.name || "Sin periodo activo"}</strong></div>
+        <div><span>Uso presupuestario</span><strong>{used.toFixed(1)}%</strong></div>
+        <div><span>Disponibilidad</span><strong>{revisedBudget ? ((available / revisedBudget) * 100).toFixed(1) : "0.0"}%</strong></div>
+      </section>
+
       <section className="kpi-grid" aria-label="Indicadores financieros">
         <KpiCard label="Presupuesto vigente" value={money(revisedBudget)} detail="Suma de partidas activas" />
         <KpiCard label="Disponible" value={money(available)} detail={`${revisedBudget ? ((available / revisedBudget) * 100).toFixed(1) : "0.0"}% restante`} tone="success" />
