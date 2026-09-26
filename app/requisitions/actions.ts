@@ -5,6 +5,16 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 
+function operationError(message: string) {
+  const value = message.toLowerCase();
+  if (value.includes("permission") || value.includes("unauthorized") || value.includes("not authorized")) return "Su usuario no tiene autorización para realizar esta acción.";
+  if (value.includes("status") || value.includes("state")) return "El documento ya no se encuentra en un estado válido para esta operación.";
+  if (value.includes("amount") || value.includes("quantity") || value.includes("exceed") || value.includes("available")) return "Los importes o cantidades indicados no son válidos o exceden el balance disponible.";
+  if (value.includes("duplicate") || value.includes("unique")) return "Ya existe un registro con esos datos. Verifique la información.";
+  if (value.includes("sod") || value.includes("own") || value.includes("creator") || value.includes("separation")) return "La separación de funciones requiere que esta acción la complete otro usuario autorizado.";
+  return "No fue posible completar la operación. Verifique los datos e intente nuevamente.";
+}
+
 async function context() {
   const { userId } = await requireUser();
   const supabase = await createClient();
@@ -24,7 +34,7 @@ export async function createRequisition(formData: FormData) {
     p_justification: justification || null,
     p_vendor: vendorId || null,
   });
-  if (error) redirect(`/requisitions/new?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/requisitions/new?error=${encodeURIComponent(operationError(error.message))}`);
   revalidatePath("/requisitions");
   redirect(`/requisitions/${data}`);
 }
@@ -43,7 +53,7 @@ export async function addRequisitionItem(formData: FormData) {
     p_quantity: quantity,
     p_unit_price: unitPrice,
   });
-  if (error) redirect(`/requisitions/${requisitionId}?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/requisitions/${requisitionId}?error=${encodeURIComponent(operationError(error.message))}`);
   revalidatePath(`/requisitions/${requisitionId}`);
   revalidatePath("/requisitions");
   redirect(`/requisitions/${requisitionId}?message=${encodeURIComponent("Artículo agregado y disponibilidad validada.")}`);
@@ -53,7 +63,7 @@ export async function submitRequisition(formData: FormData) {
   const { supabase } = await context();
   const requisitionId = String(formData.get("requisitionId") || "");
   const { error } = await supabase.rpc("submit_requisition", { p_requisition: requisitionId });
-  if (error) redirect(`/requisitions/${requisitionId}?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/requisitions/${requisitionId}?error=${encodeURIComponent(operationError(error.message))}`);
   revalidatePath(`/requisitions/${requisitionId}`);
   revalidatePath("/requisitions");
   revalidatePath("/dashboard");
@@ -65,7 +75,7 @@ export async function approveRequisition(formData: FormData) {
   const requisitionId = String(formData.get("requisitionId") || "");
   const comments = String(formData.get("comments") || "").trim();
   const { error } = await supabase.rpc("approve_requisition", { p_requisition: requisitionId, p_comments: comments || null });
-  if (error) redirect(`/requisitions/${requisitionId}?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/requisitions/${requisitionId}?error=${encodeURIComponent(operationError(error.message))}`);
   revalidatePath(`/requisitions/${requisitionId}`);
   revalidatePath("/requisitions");
   revalidatePath("/budget");
