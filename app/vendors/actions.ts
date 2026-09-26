@@ -5,6 +5,16 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 
+function operationError(message: string) {
+  const value = message.toLowerCase();
+  if (value.includes("permission") || value.includes("unauthorized") || value.includes("not authorized")) return "Su usuario no tiene autorización para realizar esta acción.";
+  if (value.includes("status") || value.includes("state")) return "El documento ya no se encuentra en un estado válido para esta operación.";
+  if (value.includes("amount") || value.includes("quantity") || value.includes("exceed") || value.includes("available")) return "Los importes o cantidades indicados no son válidos o exceden el balance disponible.";
+  if (value.includes("duplicate") || value.includes("unique")) return "Ya existe un registro con esos datos. Verifique la información.";
+  if (value.includes("sod") || value.includes("own") || value.includes("creator") || value.includes("separation")) return "La separación de funciones requiere que esta acción la complete otro usuario autorizado.";
+  return "No fue posible completar la operación. Verifique los datos e intente nuevamente.";
+}
+
 async function context() {
   const { userId } = await requireUser();
   const supabase = await createClient();
@@ -29,7 +39,7 @@ export async function createVendor(formData: FormData) {
     p_phone: String(formData.get("phone") || "").trim() || null,
     p_tax_id_masked: String(formData.get("taxIdMasked") || "").trim() || null,
   });
-  if (error) redirect(`/vendors?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/vendors?error=${encodeURIComponent(operationError(error.message))}`);
   revalidatePath("/vendors");
   redirect(`/vendors?message=${encodeURIComponent("Proveedor creado correctamente.")}`);
 }
@@ -45,7 +55,7 @@ export async function updateVendor(formData: FormData) {
     p_tax_id_masked: String(formData.get("taxIdMasked") || "").trim() || null,
     p_status: String(formData.get("status") || "ACTIVE"),
   });
-  if (error) redirect(`/vendors?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/vendors?error=${encodeURIComponent(operationError(error.message))}`);
   revalidatePath("/vendors");
   redirect(`/vendors?message=${encodeURIComponent("Proveedor actualizado.")}`);
 }
