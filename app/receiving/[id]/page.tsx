@@ -16,7 +16,7 @@ export default async function Page({params,searchParams}:{params:Promise<{id:str
  const pending=(items||[]).map((i:any)=>({...i,remaining:Math.max(0,Number(i.quantity||0)-(used.get(i.id)||0))})).filter((i:any)=>i.remaining>0);
  return <AppShell title={`Recepción ${po.po_no}`} subtitle={`Proveedor: ${vendor?.legal_name||"—"}`}>
   <div className="panel-header page-heading"><div><p className="eyebrow">Recepción parcial</p><h2>Cantidades por renglón</h2></div><Link href="/receiving" className="command-button">Volver</Link></div>
-  {msg.error?<div className="error-box">{msg.error}</div>:null}
+  {msg.error?<div className="error-box" role="alert">{msg.error}</div>:null}
   <section className="panel">{pending.length?<form action={receivePartial}><input type="hidden" name="poId" value={id}/><input type="hidden" name="itemIds" value={pending.map((i:any)=>i.id).join(",")}/><div className="table-wrap"><table className="data-table"><thead><tr><th>Descripción</th><th className="num">Ordenado</th><th className="num">Pendiente</th><th>Recibido</th><th>Rechazado</th><th>Notas</th></tr></thead><tbody>{pending.map((i:any)=><tr key={i.id}><td>{i.description}</td><td className="num">{i.quantity}</td><td className="num"><b>{i.remaining}</b></td><td><input name={`received_${i.id}`} type="number" min="0" max={i.remaining} step="0.01" defaultValue="0"/></td><td><input name={`rejected_${i.id}`} type="number" min="0" max={i.remaining} step="0.01" defaultValue="0"/></td><td><input name={`notes_${i.id}`} placeholder="Opcional"/></td></tr>)}</tbody></table></div><div className="form-actions top-gap"><button className="primary-button">Registrar recepción parcial</button></div></form>:<p className="muted">La orden no tiene cantidades pendientes.</p>}</section>
  </AppShell>
 }
