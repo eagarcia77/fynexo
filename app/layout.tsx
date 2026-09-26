@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "FYNEXO",
   description: "Financial Operations & Procurement Intelligence",
+  icons: { icon: "/fynexo-mark.svg", shortcut: "/fynexo-mark.svg", apple: "/fynexo-mark.svg" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
