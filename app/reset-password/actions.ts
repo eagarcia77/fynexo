@@ -12,7 +12,17 @@ export async function updatePassword(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
-  if (error) redirect(`/reset-password?error=${encodeURIComponent(error.message)}`);
+  if (error) {
+    const value = error.message.toLowerCase();
+    const message = value.includes("weak password") || value.includes("password should be")
+      ? "La contraseña no cumple con los requisitos de seguridad."
+      : value.includes("same password")
+        ? "La nueva contraseña debe ser diferente a la contraseña anterior."
+        : value.includes("session") || value.includes("jwt") || value.includes("expired")
+          ? "La sesión de recuperación expiró. Solicite un enlace nuevo."
+          : "No fue posible actualizar la contraseña. Solicite un enlace nuevo e intente nuevamente.";
+    redirect(`/reset-password?error=${encodeURIComponent(message)}`);
+  }
 
   await supabase.auth.signOut();
   redirect(`/login?message=${encodeURIComponent("Contraseña actualizada. Inicie sesión con la nueva contraseña.")}`);
