@@ -3,6 +3,13 @@ import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
 function when(value:string){return new Intl.DateTimeFormat("es-PR",{dateStyle:"medium",timeStyle:"short",timeZone:"America/Puerto_Rico"}).format(new Date(value))}
+function safeMetadata(value:any){
+ if(!value||typeof value!=="object") return "—";
+ const blocked=/token|secret|password|credential|authorization|cookie|session|key/i;
+ const entries=Object.entries(value).filter(([key])=>!blocked.test(key)).slice(0,6);
+ if(!entries.length) return "Detalles protegidos";
+ return entries.map(([key,val])=>`${key}: ${typeof val==="object"?"[detalle]":String(val).slice(0,80)}`).join(" · ");
+}
 
 export default async function Page(){
  const {userId}=await requireUser(); const supabase=await createClient();
@@ -23,7 +30,7 @@ export default async function Page(){
   </section>
   <section className="panel top-gap">
    <div className="panel-header"><div><p className="eyebrow">Audit trail</p><h2>Últimos movimientos</h2></div><span className="status-pill">Solo lectura</span></div>
-   {events.length?<div className="table-wrap"><table className="data-table"><thead><tr><th>Fecha</th><th>Usuario</th><th>Evento</th><th>Entidad</th><th>ID</th><th>Metadata</th></tr></thead><tbody>{events.map((e:any)=>{const p=pmap.get(e.user_id);return <tr key={e.id}><td>{when(e.created_at)}</td><td><b>{p?.full_name||"Sistema"}</b><small>{p?.email||e.user_id||"—"}</small></td><td><span className="status-pill">{e.event_type}</span></td><td>{e.entity_type||"—"}</td><td><small>{e.entity_id||"—"}</small></td><td><small>{e.metadata?JSON.stringify(e.metadata):"—"}</small></td></tr>})}</tbody></table></div>:<p className="muted">Aún no hay eventos de auditoría.</p>}
+   {events.length?<div className="table-wrap"><table className="data-table"><thead><tr><th>Fecha</th><th>Usuario</th><th>Evento</th><th>Entidad</th><th>ID</th><th>Metadata</th></tr></thead><tbody>{events.map((e:any)=>{const p=pmap.get(e.user_id);return <tr key={e.id}><td>{when(e.created_at)}</td><td><b>{p?.full_name||"Sistema"}</b><small>{p?.email||e.user_id||"—"}</small></td><td><span className="status-pill">{e.event_type}</span></td><td>{e.entity_type||"—"}</td><td><small>{e.entity_id||"—"}</small></td><td><small>{safeMetadata(e.metadata)}</small></td></tr>})}</tbody></table></div>:<p className="muted">Aún no hay eventos de auditoría.</p>}
   </section>
  </AppShell>
 }
