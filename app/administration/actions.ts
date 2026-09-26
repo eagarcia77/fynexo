@@ -69,7 +69,7 @@ export async function sendUserPasswordReset(formData: FormData) {
   const target = users.find((u: any) => u.user_id === userId);
   const email = String(target?.email || "").trim().toLowerCase();
   if (!email) redirect(`/administration?error=${encodeURIComponent("No se encontró un correo válido para este usuario.")}`);
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: "https://fynexo.onrender.com/auth/callback?next=/reset-password" });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: "https://fynexo.onrender.com/reset-password" });
   if (error) redirect(`/administration?error=${encodeURIComponent(passwordResetError(error.message))}`);
   redirect(`/administration?message=${encodeURIComponent(`Enlace seguro para cambiar la contraseña enviado a ${email}.`)}`);
 }
