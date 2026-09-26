@@ -47,10 +47,12 @@ export default async function DashboardPage() {
   let ordersOpen = 0;
   let vouchersPending = 0;
   let paymentsPosted = 0;
+  let matchExceptions = 0;
+  let integrityReview = 0;
   let activity: Array<{ id: string; event_type: string; entity_type: string; created_at: string }> = [];
 
   if (organizationId && fiscalYear?.id) {
-    const [budgetLines, balances, reqCount, poCount, voucherCount, paymentCount, audit] = await Promise.all([
+    const [budgetLines, balances, reqCount, poCount, voucherCount, paymentCount, audit, pipeline, integrity] = await Promise.all([
       supabase.from("budget_lines").select("revised_budget").eq("organization_id", organizationId).eq("fiscal_year_id", fiscalYear.id).eq("is_active", true),
       supabase.from("v_budget_balances").select("available,committed,obligated,expended").eq("organization_id", organizationId).eq("fiscal_year_id", fiscalYear.id),
       supabase.from("requisitions").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).in("status", ["SUBMITTED", "UNDER_REVIEW"]),
@@ -58,6 +60,8 @@ export default async function DashboardPage() {
       supabase.from("vouchers").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).in("status", ["DRAFT", "SUBMITTED"]),
       supabase.from("payments").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("status", "POSTED"),
       supabase.from("audit_events").select("id,event_type,entity_type,created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(4),
+      supabase.from("v_document_pipeline_summary").select("match_exceptions").eq("organization_id", organizationId).maybeSingle(),
+      supabase.from("v_financial_integrity").select("integrity_status").eq("organization_id", organizationId).eq("fiscal_year_id", fiscalYear.id),
     ]);
 
     revisedBudget = (budgetLines.data || []).reduce((sum, row) => sum + Number(row.revised_budget || 0), 0);
@@ -72,6 +76,8 @@ export default async function DashboardPage() {
     vouchersPending = voucherCount.count || 0;
     paymentsPosted = paymentCount.count || 0;
     activity = audit.data || [];
+    matchExceptions = Number(pipeline.data?.match_exceptions || 0);
+    integrityReview = (integrity.data || []).filter((row: any) => row.integrity_status !== "PASS").length;
   }
 
   const used = revisedBudget > 0 ? Math.max(0, Math.min(100, ((revisedBudget - available) / revisedBudget) * 100)) : 0;
@@ -139,9 +145,9 @@ export default async function DashboardPage() {
 
         <article className="panel alert-panel">
           <p className="eyebrow">Estado</p><h2>Controles financieros</h2>
-          <p><b>RLS activo</b> en todas las tablas operacionales.</p>
-          <p><b>Ledger protegido</b> contra edición o eliminación directa.</p>
-          <p><b>Three-Way Match</b> preparado para órdenes, recibos e invoices.</p>
+          <p><b>Integridad del ledger:</b> {integrityReview ? `${integrityReview} partida(s) requieren revisión` : "sin discrepancias detectadas"}.</p>
+          <p><b>Three-Way Match:</b> {matchExceptions ? `${matchExceptions} excepción(es) pendientes` : "sin excepciones detectadas"}.</p>
+          <p><b>Control de acceso:</b> las acciones críticas se validan en servidor y base de datos.</p>
         </article>
       </section>
     </AppShell>
