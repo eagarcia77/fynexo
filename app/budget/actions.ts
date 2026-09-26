@@ -5,6 +5,15 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 
+function budgetError(message: string) {
+  const value = message.toLowerCase();
+  if (value.includes("permission") || value.includes("unauthorized") || value.includes("not authorized")) return "Su usuario no tiene autorización para modificar el presupuesto.";
+  if (value.includes("duplicate") || value.includes("unique")) return "Ya existe un registro con esa combinación de datos.";
+  if (value.includes("amount") || value.includes("negative") || value.includes("available")) return "El importe presupuestario indicado no es válido.";
+  if (value.includes("fiscal") || value.includes("period") || value.includes("closed")) return "El periodo fiscal no está disponible para esta operación.";
+  return "No fue posible completar la operación presupuestaria. Verifique los datos e intente nuevamente.";
+}
+
 async function currentContext() {
   const { userId } = await requireUser();
   const supabase = await createClient();
@@ -41,7 +50,7 @@ export async function createBudgetDimension(formData: FormData) {
     p_name: name,
     p_account_type: accountType || null,
   });
-  if (error) redirect(`/budget/new?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/budget/new?error=${encodeURIComponent(budgetError(error.message))}`);
   revalidatePath("/budget/new");
   revalidatePath("/budget");
   redirect("/budget/new?message=" + encodeURIComponent("Catálogo actualizado correctamente."));
@@ -66,7 +75,7 @@ export async function createBudgetLine(formData: FormData) {
     p_project: optional("projectId"),
     p_cost_center: optional("costCenterId"),
   });
-  if (error) redirect(`/budget/new?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/budget/new?error=${encodeURIComponent(budgetError(error.message))}`);
   revalidatePath("/budget");
   revalidatePath("/dashboard");
   redirect("/budget?message=" + encodeURIComponent("Partida creada y presupuesto inicial publicado al ledger."));
