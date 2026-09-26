@@ -28,16 +28,17 @@ export default async function RequisitionDetailPage({ params, searchParams }: { 
     .maybeSingle();
   if (!req) notFound();
 
-  const [{ data: fy }, { data: items }, { data: lines }, { data: balances }] = await Promise.all([
+  const [{ data: fy }, { data: items }, { data: lines }, { data: balances }, { data: canApprovePermission }] = await Promise.all([
     supabase.from("fiscal_years").select("code,name").eq("id", req.fiscal_year_id).maybeSingle(),
     supabase.from("requisition_items").select("id,description,quantity,unit_price,line_total,budget_line_id,budget_lines(accounts(code,name),funds(code),departments(name))").eq("requisition_id", id).order("id"),
     supabase.from("budget_lines").select("id,accounts(code,name),funds(code),departments(name)").eq("organization_id", organizationId).eq("fiscal_year_id", req.fiscal_year_id).eq("is_active", true),
     supabase.from("v_budget_balances").select("budget_line_id,available").eq("organization_id", organizationId).eq("fiscal_year_id", req.fiscal_year_id),
+    supabase.rpc("current_user_has_permission", { p_org: organizationId, p_permission: "requisition.approve" }),
   ]);
 
   const balanceMap = new Map((balances || []).map((b: any) => [b.budget_line_id, Number(b.available || 0)]));
   const editable = req.status === "DRAFT" && req.requester_id === userId;
-  const canApprove = req.status === "SUBMITTED" && req.requester_id !== userId;
+  const canApprove = req.status === "SUBMITTED" && req.requester_id !== userId && Boolean(canApprovePermission);
   const hasItems = (items || []).length > 0;
 
   const editor = (
