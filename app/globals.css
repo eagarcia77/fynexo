@@ -67,3 +67,6 @@ body{letter-spacing:-.005em}
 @media(max-width:1050px){.data-table{min-width:900px}.inline-form{min-width:0}}
 @media(max-width:860px){.panel-header{align-items:flex-start}.panel-header .primary-button{width:100%}.data-table{min-width:760px}.form-grid{grid-template-columns:1fr}.form-grid .span-2{grid-column:auto}}
 @media(max-width:560px){.topbar{gap:12px}.topbar h1{font-size:1.7rem}.topbar .muted{font-size:.84rem}.page-content{padding-left:14px;padding-right:14px}.kpi-grid{gap:10px}.kpi-card{padding:17px}.dashboard-grid{gap:10px}.panel{border-radius:15px}.data-table{min-width:680px}.inline-form{grid-template-columns:1fr;min-width:220px}.form-actions>*{width:100%}}
+
+/* FYNEXO brand mark */
+.brand-mark{color:#fff;overflow:hidden}.brand-mark img{display:block;width:62%;height:62%;object-fit:contain;filter:none}.sidebar .brand-mark{background:#fff;color:#08775f;box-shadow:none}.sidebar .brand-mark img{width:68%;height:68%}
