@@ -32,7 +32,7 @@ export default async function Page(){
   <div className="dashboard-grid">
    <section className="panel span-2">
     <p className="eyebrow">Integridad financiera</p><h2>Control del Budget Ledger</h2>
-    <div className={review?"error-box":"success-box"}>{review?`${review} partida(s) requieren revisión.`:`PASS · ${pass} partida(s) reconciliadas correctamente.`}</div>
+    <div className={review?"error-box":"success-box"} role={review?"alert":"status"}>{review?`${review} partida(s) requieren revisión.`:`PASS · ${pass} partida(s) reconciliadas correctamente.`}</div>
     <p className="muted">FYNEXO compara presupuesto original/revisado, compromisos, obligaciones, gastos y disponible contra el valor esperado derivado del ledger.</p>
    </section>
    <section className="panel">
