@@ -5,6 +5,14 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 
+function adminError(message: string) {
+  const value = message.toLowerCase();
+  if (value.includes("admin_required") || value.includes("permission") || value.includes("unauthorized")) return "Acceso administrativo requerido.";
+  if (value.includes("duplicate") || value.includes("unique") || value.includes("already")) return "El usuario o la invitación ya existe.";
+  if (value.includes("expired")) return "La invitación expiró. Cree una nueva invitación.";
+  return "No fue posible completar la operación administrativa. Intente nuevamente.";
+}
+
 function passwordResetError(message: string) {
   const normalized = message.toLowerCase();
   if (normalized.includes("email rate limit exceeded") || normalized.includes("rate limit")) {
@@ -29,7 +37,7 @@ export async function createInvitation(formData: FormData) {
   const roleId = String(formData.get("roleId") || "");
   const expiresHours = Number(formData.get("expiresHours") || 72);
   const { data, error } = await supabase.rpc("create_user_invitation", { p_org: organizationId, p_email: email, p_role: roleId, p_expires_hours: expiresHours });
-  if (error) redirect(`/administration?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/administration?error=${encodeURIComponent(adminError(error.message))}`);
   const row = Array.isArray(data) ? data[0] : data;
   revalidatePath("/administration");
   redirect(`/administration?invite=${encodeURIComponent(row?.token || "")}&email=${encodeURIComponent(email)}&expires=${encodeURIComponent(row?.expires_at || "")}`);
@@ -39,7 +47,7 @@ export async function revokeInvitation(formData: FormData) {
   const { supabase } = await context();
   const invitationId = String(formData.get("invitationId") || "");
   const { error } = await supabase.rpc("revoke_user_invitation", { p_invitation: invitationId });
-  if (error) redirect(`/administration?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/administration?error=${encodeURIComponent(adminError(error.message))}`);
   revalidatePath("/administration");
   redirect(`/administration?message=${encodeURIComponent("Invitación revocada.")}`);
 }
@@ -50,7 +58,7 @@ export async function setUserRole(formData: FormData) {
   const roleId = String(formData.get("roleId") || "");
   const active = String(formData.get("active") || "true") === "true";
   const { error } = await supabase.rpc("set_user_role", { p_org: organizationId, p_user: userId, p_role: roleId, p_active: active });
-  if (error) redirect(`/administration?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/administration?error=${encodeURIComponent(adminError(error.message))}`);
   revalidatePath("/administration");
   redirect(`/administration?message=${encodeURIComponent("Rol de usuario actualizado.")}`);
 }
