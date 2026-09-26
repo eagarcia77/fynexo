@@ -11,7 +11,7 @@ export default async function LoginPage({
   return (
     <main className="login-shell">
       <section className="login-panel" aria-labelledby="login-title">
-        <div className="brand-mark" aria-hidden="true">FX</div>
+        <div className="brand-mark" aria-hidden="true"><img src="/fynexo-mark.svg" alt="" /></div>
         <p className="eyebrow">Financial Operations & Procurement Intelligence</p>
         <h1 id="login-title">FYNEXO</h1>
         <p className="muted">Conecta. Controla. Decide.</p>
