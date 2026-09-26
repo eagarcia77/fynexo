@@ -32,8 +32,8 @@ export async function receiveRemaining(formData: FormData){
  ]);
  const receiptIds=(receipts||[]).map((r:any)=>r.id); let received:any[]=[];
  if(receiptIds.length){const {data}=await supabase.from("receipt_items").select("purchase_order_item_id,quantity_received,quantity_rejected").in("receipt_id",receiptIds); received=data||[];}
- const used=new Map<string,number>(); for(const r of received){used.set(r.purchase_order_item_id,(used.get(r.purchase_order_item_id)||0)+Number(r.quantity_received||0)+Number(r.quantity_rejected||0));}
- const payload=(items||[]).map((i:any)=>({purchase_order_item_id:i.id,quantity_received:Math.max(0,Number(i.quantity||0)-(used.get(i.id)||0)),quantity_rejected:0})).filter((i:any)=>i.quantity_received>0);
+ const accepted=new Map<string,number>(); for(const r of received){accepted.set(r.purchase_order_item_id,(accepted.get(r.purchase_order_item_id)||0)+Number(r.quantity_received||0));}
+ const payload=(items||[]).map((i:any)=>({purchase_order_item_id:i.id,quantity_received:Math.max(0,Number(i.quantity||0)-(accepted.get(i.id)||0)),quantity_rejected:0})).filter((i:any)=>i.quantity_received>0);
  return postReceipt(poId,payload,"/receiving");
 }
 
