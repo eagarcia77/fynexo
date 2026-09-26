@@ -64,7 +64,7 @@ export function AppShell({
       <aside className={`sidebar ${menuOpen ? "menu-open" : ""}`}>
         <div className="sidebar-head">
           <Link href="/dashboard" className="sidebar-brand" aria-label="FYNEXO Dashboard">
-            <div className="brand-mark small">FX</div>
+            <div className="brand-mark small"><img src="/fynexo-mark.svg" alt="" /></div>
             <div><strong>FYNEXO</strong><span>Financial Operations</span></div>
           </Link>
           <button className="mobile-menu-button" type="button" aria-expanded={menuOpen} aria-controls="fynexo-navigation" onClick={() => setMenuOpen(v => !v)}>
