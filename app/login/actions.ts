@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-const RECOVERY_REDIRECT = "https://fynexo.onrender.com/auth/callback?next=/reset-password";
+const RECOVERY_REDIRECT = "https://fynexo.onrender.com/reset-password";
 
 function publicAuthError(message: string) {
   const normalized = message.toLowerCase();
