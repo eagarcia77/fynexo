@@ -10,7 +10,7 @@ const allowedHosts = new Set([
 
 const legacyLocalHosts = new Set(["localhost", "127.0.0.1"]);
 const canonicalOrigin = "https://fynexo.onrender.com";
-const canonicalRecovery = `${canonicalOrigin}/auth/callback?next=/reset-password`;
+const canonicalRecovery = `${canonicalOrigin}/reset-password`;
 
 function normalizeRecoveryUrl(url: URL) {
   // Supabase can return the PKCE code directly to an old local Site URL.
@@ -21,9 +21,8 @@ function normalizeRecoveryUrl(url: URL) {
       throw new Error("El enlace local no contiene un código de recuperación válido.");
     }
 
-    const target = new URL(`${canonicalOrigin}/auth/callback`);
+    const target = new URL(`${canonicalOrigin}/reset-password`);
     target.searchParams.set("code", code);
-    target.searchParams.set("next", "/reset-password");
     return target.toString();
   }
 
@@ -76,11 +75,11 @@ export default function RecoverLinkPage() {
   return (
     <main className="login-shell">
       <section className="login-panel" aria-labelledby="recover-link-title">
-        <div className="brand-mark" aria-hidden="true">FX</div>
+        <div className="brand-mark" aria-hidden="true"><img src="/fynexo-mark.svg" alt="" /></div>
         <p className="eyebrow">Recuperación alternativa</p>
         <h1 id="recover-link-title">Abrir enlace de recuperación</h1>
         <p className="muted">
-          Pegue aquí el enlace completo recibido por correo. FYNEXO puede corregir tanto enlaces de Supabase con una redirección antigua como enlaces que llegaron directamente a localhost con un código PKCE.
+          Pegue aquí el enlace completo recibido por correo. FYNEXO puede corregir enlaces de Supabase con una redirección antigua y enlaces PKCE que llegaron incorrectamente a localhost.
         </p>
         <form onSubmit={openRecovery} className="login-form">
           <label>
@@ -89,7 +88,7 @@ export default function RecoverLinkPage() {
               value={value}
               onChange={(e) => setValue(e.target.value)}
               rows={5}
-              placeholder="http://localhost:3000/?code=..."
+              placeholder="Pegue aquí el enlace completo recibido por correo"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
