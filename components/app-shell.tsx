@@ -39,12 +39,13 @@ export function AppShell({
         const { data: userData } = await supabase.auth.getUser();
         const userId = userData.user?.id;
         if (!userId) return;
-        const { data } = await supabase.from("user_roles").select("roles(code)").eq("user_id", userId);
-        const admin = (data || []).some((row: any) => {
-          const role = Array.isArray(row.roles) ? row.roles[0] : row.roles;
-          return role?.code === "ADMIN";
+        const { data: membership } = await supabase.from("organization_memberships").select("organization_id").eq("user_id", userId).eq("is_active", true).limit(1).maybeSingle();
+        if (!membership?.organization_id) return;
+        const { data: canAdmin } = await supabase.rpc("current_user_has_permission", {
+          p_org: membership.organization_id,
+          p_permission: "users.manage",
         });
-        if (active) setIsAdmin(admin);
+        if (active) setIsAdmin(Boolean(canAdmin));
       } finally { if (active) setRoleLoaded(true); }
     }
     loadRole();
